@@ -1,6 +1,9 @@
 # Comparing Mandelbrot set for `quad-precision`, `double` and `long double` data types
 Theoretical reference is taken from [Plotting algorithms for the Mandelbrot set(Wikipedia)](https://en.m.wikipedia.org/wiki/Plotting_algorithms_for_the_Mandelbrot_set)
 
+## Updates
+- [11/08/2024] Added Mandelbrot script in Python using Numpy with custom built QuadPrecision Datatype
+  
 ## Comparison Table
 | double | long double | __float128 |
 |--------|-------------|------------|
