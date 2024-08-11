@@ -3,6 +3,7 @@ Theoretical reference is taken from [Plotting algorithms for the Mandelbrot set(
 
 ## Updates
 - [11/08/2024] Added Mandelbrot script in Python using Numpy with custom built QuadPrecision Datatype
+- [11/08/2024] Added the `tlfloat` backend support for better quadprecision maths
   
 ## Comparison Table
 | double | long double | __float128 |
