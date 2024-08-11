@@ -1,6 +1,6 @@
 #define PY_SSIZE_T_CLEAN
 
-#include<Python.h>
+#include <Python.h>
 
 #include <stdio.h>
 #include <sleef.h>
@@ -11,9 +11,13 @@
 #include <string>
 #include <limits>
 #include <typeinfo>
-#include <quadmath.h>
+#include <tlfloat/tlfloat.h>
 
-typedef struct {
+#define TLFLOAT_LIBQUADMATH_EMULATION
+// #include <quadmath.h>
+
+typedef struct
+{
     unsigned char r, g, b;
 } Color;
 
@@ -24,7 +28,7 @@ struct Complex
     T img;
 };
 
-template<typename T>
+template <typename T>
 struct MandelbrotResult
 {
     T smooth_iter;
@@ -51,12 +55,13 @@ struct MathOps
     static constexpr T pi() { return static_cast<T>(M_PI); }
     static constexpr T ln2() { return static_cast<T>(M_LN2); }
 
-    static const char* dtype_name() {
+    static const char *dtype_name()
+    {
         return typeid(T).name();
     }
 };
 
-template<>
+template <>
 struct MathOps<Sleef_quad>
 {
     static Sleef_quad add(Sleef_quad a, Sleef_quad b) { return Sleef_addq1_u05(a, b); }
@@ -73,12 +78,36 @@ struct MathOps<Sleef_quad>
     static Sleef_quad pi() { return SLEEF_M_PIq; }
     static Sleef_quad ln2() { return SLEEF_M_LN2q; }
 
-    static const char* dtype_name() {
+    static const char *dtype_name()
+    {
         return "Sleef_quad";
     }
 };
 
+template <>
+struct MathOps<tlfloat_quad>
+{
+    static tlfloat_quad add(tlfloat_quad a, tlfloat_quad b) { return a + b; }
+    static tlfloat_quad sub(tlfloat_quad a, tlfloat_quad b) { return a - b; }
+    static tlfloat_quad mul(tlfloat_quad a, tlfloat_quad b) { return a * b; }
+    static tlfloat_quad div(tlfloat_quad a, tlfloat_quad b) { return a / b; }
+    static tlfloat_quad sqrt(tlfloat_quad a) { return tlfloat_sqrtq(a); }
+    static tlfloat_quad log(tlfloat_quad a) { return tlfloat_logq(a); }
+    static tlfloat_quad abs(tlfloat_quad a) { return tlfloat_fabsq(a); }
+    static bool greater(tlfloat_quad a, tlfloat_quad b) { return a > b; }
+    static tlfloat_quad cast_from_double(double a) { return (tlfloat_quad)a; }
+    static double cast_to_double(tlfloat_quad a) { return (double)a; }
+    static tlfloat_quad from_int(int a) { return (tlfloat_quad)a; }
+    static tlfloat_quad pi() { return TLFLOAT_M_PIq; }
+    static tlfloat_quad ln2() { return TLFLOAT_M_LN2q; }
 
+    static const char *dtype_name()
+    {
+        return "tlfloat_quad";
+    }
+};
+
+/*
  template<>
  struct MathOps<__float128>
  {
@@ -100,21 +129,23 @@ struct MathOps<Sleef_quad>
          return "__float128";
      }
  };
+*/
 
-
-template<typename T>
-T get_abs_value(const Complex<T>& z)
+template <typename T>
+T get_abs_value(const Complex<T> &z)
 {
     return MathOps<T>::add(MathOps<T>::mul(z.real, z.real), MathOps<T>::mul(z.img, z.img));
 }
 
-template<typename T>
-Color get_color(T t, T interior_t) {
+template <typename T>
+Color get_color(T t, T interior_t)
+{
     Color color;
     const double epsilon = 1e-10;
 
     // Interior coloring
-    if (std::abs(MathOps<T>::cast_to_double(t) - 1.0) < epsilon) {
+    if (std::abs(MathOps<T>::cast_to_double(t) - 1.0) < epsilon)
+    {
         unsigned char value = (unsigned char)(255 * MathOps<T>::cast_to_double(interior_t));
         color.r = value;
         color.g = value;
@@ -127,32 +158,38 @@ Color get_color(T t, T interior_t) {
     t_double = std::pow(t_double, 0.5);
     t_double = std::fmod(t_double * 20, 1.0);
 
-    if (t_double < 0.16) {
+    if (t_double < 0.16)
+    {
         color.r = 0;
         color.g = (unsigned char)(255 * (t_double / 0.16));
         color.b = (unsigned char)(128 + 127 * (t_double / 0.16));
     }
-    else if (t_double < 0.33) {
+    else if (t_double < 0.33)
+    {
         color.r = 0;
         color.g = 255;
         color.b = (unsigned char)(255 * (1 - (t_double - 0.16) / 0.17));
     }
-    else if (t_double < 0.5) {
+    else if (t_double < 0.5)
+    {
         color.r = (unsigned char)(255 * ((t_double - 0.33) / 0.17));
         color.g = 255;
         color.b = 0;
     }
-    else if (t_double < 0.66) {
+    else if (t_double < 0.66)
+    {
         color.r = 255;
         color.g = (unsigned char)(255 * (1 - (t_double - 0.5) / 0.16));
         color.b = 0;
     }
-    else if (t_double < 0.83) {
+    else if (t_double < 0.83)
+    {
         color.r = 255;
         color.g = 0;
         color.b = (unsigned char)(255 * ((t_double - 0.66) / 0.17));
     }
-    else {
+    else
+    {
         color.r = (unsigned char)(255 * (1 - (t_double - 0.83) / 0.17));
         color.g = 0;
         color.b = (unsigned char)(128 * ((t_double - 0.83) / 0.17));
@@ -161,7 +198,7 @@ Color get_color(T t, T interior_t) {
     return color;
 }
 
-template<typename T>
+template <typename T>
 struct MathOps<Complex<T>>
 {
     static Complex<T> add(Complex<T> a, Complex<T> b)
@@ -173,14 +210,13 @@ struct MathOps<Complex<T>>
     {
         return {
             MathOps<T>::sub(MathOps<T>::mul(a.real, b.real), MathOps<T>::mul(a.img, b.img)),
-            MathOps<T>::add(MathOps<T>::mul(a.real, b.img), MathOps<T>::mul(a.img, b.real))
-        };
+            MathOps<T>::add(MathOps<T>::mul(a.real, b.img), MathOps<T>::mul(a.img, b.real))};
     }
 
     static Complex<T> pow(Complex<T> z, int n)
     {
         Complex<T> res = {MathOps<T>::cast_from_double(1.0), MathOps<T>::cast_from_double(0.0)};
-        for(int i=0; i < n; i++)
+        for (int i = 0; i < n; i++)
         {
             res = mul(res, z);
         }
@@ -189,10 +225,10 @@ struct MathOps<Complex<T>>
 
     static Complex<T> derivative(Complex<T> z, Complex<T> c, int n)
     {
-        if(n == 0)
+        if (n == 0)
             return {MathOps<T>::cast_from_double(1.0), MathOps<T>::cast_from_double(0.0)};
 
-        Complex<T> prev = derivative(z, c, n-1);
+        Complex<T> prev = derivative(z, c, n - 1);
         return mul(prev, {MathOps<T>::cast_from_double(2.0), MathOps<T>::cast_from_double(0.0)});
     }
 };
@@ -206,16 +242,18 @@ struct Derivatives
     Complex<T> dzdz;
 };
 
-template<typename T>
-Derivatives<T> iterate_and_compute_derivatives(Complex<T> c, int max_iter) {
+template <typename T>
+Derivatives<T> iterate_and_compute_derivatives(Complex<T> c, int max_iter)
+{
     Complex<T> z = {MathOps<T>::cast_from_double(0.0), MathOps<T>::cast_from_double(0.0)};
     Complex<T> dz = {MathOps<T>::cast_from_double(1.0), MathOps<T>::cast_from_double(0.0)};
     Complex<T> dc = {MathOps<T>::cast_from_double(0.0), MathOps<T>::cast_from_double(0.0)};
     Complex<T> dzdz = {MathOps<T>::cast_from_double(0.0), MathOps<T>::cast_from_double(0.0)};
     Complex<T> two = {MathOps<T>::cast_from_double(2.0), MathOps<T>::cast_from_double(0.0)};
 
-    for (int i = 0; i < max_iter; i++) {
-        dzdz = MathOps<Complex<T>>::add(MathOps<Complex<T>>::mul(two,  MathOps<Complex<T>>::mul(z, dzdz)), MathOps<Complex<T>>::mul(dz, dz));
+    for (int i = 0; i < max_iter; i++)
+    {
+        dzdz = MathOps<Complex<T>>::add(MathOps<Complex<T>>::mul(two, MathOps<Complex<T>>::mul(z, dzdz)), MathOps<Complex<T>>::mul(dz, dz));
         dz = MathOps<Complex<T>>::add(MathOps<Complex<T>>::mul(two, MathOps<Complex<T>>::mul(z, dz)), dc);
         z = MathOps<Complex<T>>::add(MathOps<Complex<T>>::mul(z, z), c);
         dc.real = MathOps<T>::cast_from_double(1.0);
@@ -225,7 +263,7 @@ Derivatives<T> iterate_and_compute_derivatives(Complex<T> c, int max_iter) {
     return {z, dz, dc, dzdz};
 }
 
-template<typename T>
+template <typename T>
 T estimate_interior_distance(Complex<T> c, int max_iter)
 {
     Derivatives<T> d = iterate_and_compute_derivatives(c, max_iter);
@@ -234,15 +272,14 @@ T estimate_interior_distance(Complex<T> c, int max_iter)
     T one = MathOps<T>::cast_from_double(1.0);
     T numerator = MathOps<T>::sub(one, dz_abs_sq);
 
-    Complex<T> denominator_term1 =  MathOps<Complex<T>>::mul(d.dc, d.dz);
-    Complex<T> denominator_term2 =  MathOps<Complex<T>>::mul(d.dzdz,  MathOps<Complex<T>>::mul(d.z, d.dc));
-    Complex<T> denominator =  MathOps<Complex<T>>::add(denominator_term1, denominator_term2);
+    Complex<T> denominator_term1 = MathOps<Complex<T>>::mul(d.dc, d.dz);
+    Complex<T> denominator_term2 = MathOps<Complex<T>>::mul(d.dzdz, MathOps<Complex<T>>::mul(d.z, d.dc));
+    Complex<T> denominator = MathOps<Complex<T>>::add(denominator_term1, denominator_term2);
 
     T denominator_abs = MathOps<T>::sqrt(get_abs_value(denominator));
 
     return MathOps<T>::div(numerator, denominator_abs);
 }
-
 
 template <typename T>
 T estimate_distance(T cr, T ci, int period)
@@ -259,7 +296,7 @@ T estimate_distance(T cr, T ci, int period)
     for (int i = 0; i < period; i++)
     {
         dc = MathOps<Complex<T>>::add(MathOps<Complex<T>>::mul(dc, {MathOps<T>::cast_from_double(2.0), MathOps<T>::cast_from_double(0.0)}),
-            {MathOps<T>::cast_from_double(1.0), MathOps<T>::cast_from_double(0.0)});
+                                      {MathOps<T>::cast_from_double(1.0), MathOps<T>::cast_from_double(0.0)});
     }
 
     T abs_dz = MathOps<T>::sqrt(get_abs_value(dz));
@@ -299,8 +336,8 @@ T estimate_distance(T cr, T ci, int period)
 //     return Sleef_sqrtq1_u05(get_abs_value(&z_real, &z_img));
 // }
 
-template<typename T>
-MandelbrotResult<T> mandelbrot(const Complex<T>& c, int MAX_ITER, const T& RADIUS2)
+template <typename T>
+MandelbrotResult<T> mandelbrot(const Complex<T> &c, int MAX_ITER, const T &RADIUS2)
 {
     Complex<T> z = {MathOps<T>::cast_from_double(0.0), MathOps<T>::cast_from_double(0.0)};
     T two = MathOps<T>::cast_from_double(2.0);
@@ -331,11 +368,10 @@ MandelbrotResult<T> mandelbrot(const Complex<T>& c, int MAX_ITER, const T& RADIU
     return result;
 }
 
-
-template<typename T>
-PyObject* mandelbrot_set(int width, int height, int max_iter, T center_r, T center_i, T zoom)
+template <typename T>
+PyObject *mandelbrot_set(int width, int height, int max_iter, T center_r, T center_i, T zoom)
 {
-    unsigned char* img = (unsigned char *)malloc(width * height * 3);
+    unsigned char *img = (unsigned char *)malloc(width * height * 3);
     if (!img)
     {
         PyErr_NoMemory();
@@ -379,7 +415,6 @@ PyObject* mandelbrot_set(int width, int height, int max_iter, T center_r, T cent
             img[(y * width + x) * 3 + 1] = color.g;
             img[(y * width + x) * 3 + 2] = color.b;
             // total_pixels++;
-
         }
     }
     // if (total_pixels != width * height) {
@@ -396,7 +431,7 @@ PyObject* mandelbrot_set(int width, int height, int max_iter, T center_r, T cent
     // }
     // printf("Non-zero pixels in img buffer: %d out of %d\n", non_zero_pixels, width * height * 3);
 
-    PyObject* result = PyBytes_FromStringAndSize((char *)img, width * height * 3);
+    PyObject *result = PyBytes_FromStringAndSize((char *)img, width * height * 3);
 
     // if (result)
     // {
@@ -408,8 +443,8 @@ PyObject* mandelbrot_set(int width, int height, int max_iter, T center_r, T cent
     //     }
     // }
 
-
-    if (!result) {
+    if (!result)
+    {
         PyErr_SetString(PyExc_RuntimeError, "Failed to create bytes object");
         return NULL;
     }
@@ -418,19 +453,19 @@ PyObject* mandelbrot_set(int width, int height, int max_iter, T center_r, T cent
     return result;
 }
 
-static PyObject * mandelbrot_set_wrapper(PyObject * self, PyObject * args)
+static PyObject *mandelbrot_set_wrapper(PyObject *self, PyObject *args)
 {
     int width, height, max_iter;
-    const char * center_r_str, *center_i_str, *zoom_str;
-    int use_quad_precision;
+    const char *center_r_str, *center_i_str, *zoom_str;
+    const char *backend;
 
-    if(!PyArg_ParseTuple(args, "iiisssi", &width, &height, &max_iter, &center_r_str, &center_i_str, &zoom_str, &use_quad_precision))
+    if (!PyArg_ParseTuple(args, "iiissss", &width, &height, &max_iter, &center_r_str, &center_i_str, &zoom_str, &backend))
         return NULL;
 
-    PyObject * result;
-    const char * precision_used;
-
-    if(use_quad_precision == 1)
+    PyObject *result;
+    const char *precision_used;
+    printf("%s\n", backend);
+    if (strcmp(backend, "sleef") == 0)
     {
         Sleef_quad center_r = Sleef_strtoq(center_r_str, NULL);
         Sleef_quad center_i = Sleef_strtoq(center_i_str, NULL);
@@ -439,15 +474,32 @@ static PyObject * mandelbrot_set_wrapper(PyObject * self, PyObject * args)
         result = mandelbrot_set<Sleef_quad>(width, height, max_iter, center_r, center_i, zoom);
         precision_used = MathOps<Sleef_quad>::dtype_name();
     }
-    else if(use_quad_precision == 2)
+    else if (strcmp(backend, "tlfloat") == 0)
     {
-        __float128 center_r = strtoflt128(center_r_str, NULL);
-        __float128 center_i = strtoflt128(center_i_str, NULL);
-        __float128 zoom = strtoflt128(zoom_str, NULL);
-        result = mandelbrot_set<__float128>(width, height, max_iter, center_r, center_i, zoom);
-        precision_used = MathOps<__float128>::dtype_name();
+        tlfloat_quad center_r = tlfloat_strtoq(center_r_str, NULL);
+        tlfloat_quad center_i = tlfloat_strtoq(center_i_str, NULL);
+        tlfloat_quad zoom = tlfloat_strtoq(zoom_str, NULL);
+
+        result = mandelbrot_set<tlfloat_quad>(width, height, max_iter, center_r, center_i, zoom);
+        precision_used = MathOps<tlfloat_quad>::dtype_name();
     }
-    else if(use_quad_precision == 3)
+    // else if (use_quad_precision == 2)
+    // {
+    //     __float128 center_r = strtoflt128(center_r_str, NULL);
+    //     __float128 center_i = strtoflt128(center_i_str, NULL);
+    //     __float128 zoom = strtoflt128(zoom_str, NULL);
+    //     result = mandelbrot_set<__float128>(width, height, max_iter, center_r, center_i, zoom);
+    //     precision_used = MathOps<__float128>::dtype_name();
+    // }
+    else if (strcmp(backend, "ld") == 0)
+    {
+        long double center_r = std::stold(center_r_str);
+        long double center_i = std::stold(center_i_str);
+        long double zoom = std::stold(zoom_str);
+        result = mandelbrot_set<long double>(width, height, max_iter, center_r, center_i, zoom);
+        precision_used = MathOps<long double>::dtype_name();
+    }
+    else if (strcmp(backend, "d") == 0)
     {
         double center_r = std::stod(center_r_str);
         double center_i = std::stod(center_i_str);
@@ -457,14 +509,10 @@ static PyObject * mandelbrot_set_wrapper(PyObject * self, PyObject * args)
     }
     else
     {
-        long double center_r = std::stold(center_r_str);
-        long double center_i = std::stold(center_i_str);
-        long double zoom = std::stold(zoom_str);
-        result = mandelbrot_set<long double>(width, height, max_iter, center_r, center_i, zoom);
-        precision_used = MathOps<long double>::dtype_name();
+        PyErr_SetString(PyExc_RuntimeError, "Please use the proper backend");
     }
 
-    PyObject* return_tuple = PyTuple_New(2);
+    PyObject *return_tuple = PyTuple_New(2);
     PyTuple_SetItem(return_tuple, 0, result);
     PyTuple_SetItem(return_tuple, 1, PyUnicode_FromString(precision_used));
 
@@ -472,19 +520,17 @@ static PyObject * mandelbrot_set_wrapper(PyObject * self, PyObject * args)
 }
 
 static PyMethodDef MandelbrotMethods[] =
-{
-    {"mandelbrot_set", mandelbrot_set_wrapper, METH_VARARGS, "Calculate Mandelbrot set"},
-    {NULL, NULL, 0, NULL}
-};
+    {
+        {"mandelbrot_set", mandelbrot_set_wrapper, METH_VARARGS, "Calculate Mandelbrot set"},
+        {NULL, NULL, 0, NULL}};
 
 static struct PyModuleDef mandelbrotmodule =
-{
-    PyModuleDef_HEAD_INIT,
-    "mandelbrot",
-    NULL,
-    -1,
-    MandelbrotMethods
-};
+    {
+        PyModuleDef_HEAD_INIT,
+        "mandelbrot",
+        NULL,
+        -1,
+        MandelbrotMethods};
 
 PyMODINIT_FUNC PyInit_mandelbrot(void)
 {
